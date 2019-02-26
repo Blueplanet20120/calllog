@@ -1,6 +1,7 @@
 package unit.lhn.callinfo
 
 import android.content.ContentValues
+import android.content.Intent
 import android.database.Cursor
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -13,17 +14,30 @@ import android.widget.Button
 import android.widget.EditText
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
+import android.R.attr.data
+import android.widget.TextView
+import org.w3c.dom.Text
+
 
 class MainActivity : AppCompatActivity() {
-
+    lateinit var name: TextView
+    lateinit var number: TextView
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         this.findViewById<Button>(R.id.inbtn).setOnClickListener({ view ->
-            readCall("")
+
         })
         this.findViewById<Button>(R.id.outbtn).setOnClickListener(View.OnClickListener {
 
+        })
+        name = this.findViewById<TextView>(R.id.name)
+        name.setOnClickListener(View.OnClickListener {
+            intentToContact()
+        })
+        number = this.findViewById<TextView>(R.id.name)
+        number.setOnClickListener(View.OnClickListener {
+            intentToContact()
         })
     }
 
@@ -36,6 +50,7 @@ class MainActivity : AppCompatActivity() {
         value.put(Calls.DURATION, Random().nextInt((max - min) + 1) + 1)
         value.put(Calls.NUMBER, number)
         value.put(Calls.DATE, date.time)
+
         contentResolver.insert(Calls.CONTENT_URI, value)
     }
 
@@ -48,6 +63,26 @@ class MainActivity : AppCompatActivity() {
         Calls.PHONE_ACCOUNT_ID
 
     )
+
+    fun intentToContact() {
+        // 跳转到联系人界面
+        var intent = Intent()
+        intent.setAction("android.intent.action.PICK")
+        intent.addCategory("android.intent.category.DEFAULT")
+        intent.setType("vnd.android.cursor.dir/phone_v2")
+        startActivityForResult(intent, 0x30)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 0x30) {
+            if (data != null) {
+                val uri = data.data
+                name.text=uri.toString()
+
+            }
+        }
+    }
 
     fun readCall(number: String) {
         var cursor = contentResolver.query(Calls.CONTENT_URI, null, null, null, Calls.DEFAULT_SORT_ORDER)
