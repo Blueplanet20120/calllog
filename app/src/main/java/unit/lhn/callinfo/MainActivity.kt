@@ -9,7 +9,6 @@ import android.database.Cursor
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.CallLog.*
-import android.text.SpannableStringBuilder
 import android.view.View
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
@@ -17,83 +16,98 @@ import android.net.Uri
 import android.os.Build
 import android.provider.ContactsContract
 import android.widget.*
+import java.lang.Exception
 
 
 class MainActivity : AppCompatActivity() {
-    lateinit var name: TextView
-    lateinit var number: TextView
-    lateinit var date: TextView
-    lateinit var time: TextView
     var userInfo: UserInfo? = null
+    var dateTime = DateTime()
     @TargetApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        this.findViewById<Button>(R.id.inbtn).setOnClickListener({ view ->
-            if (userInfo == null) {
-                Toast.makeText(applicationContext, "请选择一个电话号码", Toast.LENGTH_LONG)
-                return@setOnClickListener
-            }
-
+       inbtn.setOnClickListener({ v ->
+           addCall2(CallType.In)
+       })
+        outbtn.setOnClickListener({ v ->
+            addCall2(CallType.Out)
         })
-        this.findViewById<Button>(R.id.outbtn).setOnClickListener(View.OnClickListener {
-            if (userInfo == null) {
-                Toast.makeText(applicationContext, "请选择一个电话号码", Toast.LENGTH_LONG)
-                return@OnClickListener
-            }
-        })
-        date = findViewById(R.id.date)
-        time = findViewById(R.id.time)
-        name = this.findViewById<TextView>(R.id.name)
         name.setOnClickListener(View.OnClickListener {
             intentToContact()
         })
-        number = this.findViewById<TextView>(R.id.number)
         number.setOnClickListener(View.OnClickListener {
             intentToContact()
         })
         date.setOnClickListener(View.OnClickListener {
             DatePickerDialog(
-                applicationContext,
+                this,
                 DatePickerDialog.OnDateSetListener({ view, year, month, dayOfMonth ->
-
-
+                    date.text = "${String.format("%04d", year)}-${String.format("%02d", month + 1)}-${String.format(
+                        "%02d",
+                        dayOfMonth
+                    )}"
+                    dateTime.day = dayOfMonth
+                    dateTime.month = month
+                    dateTime.year = year
                 }),
-                0,0,0
-                ).show()
+                Calendar.getInstance().get(Calendar.YEAR),
+                Calendar.getInstance().get(Calendar.MONTH),
+                Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+            ).show()
         })
         time.setOnClickListener(View.OnClickListener {
             TimePickerDialog(
-                applicationContext, TimePickerDialog.OnTimeSetListener({ view, hourOfDay, minute ->
-
+                this, TimePickerDialog.OnTimeSetListener({ view, hourOfDay, minute ->
+                    time.text = "${String.format("%02d", hourOfDay)}:${String.format("%02d", minute)}"
+                    dateTime.hour = hourOfDay
+                    dateTime.minute = minute
 
                 }),
-                12, 12, true
+                Calendar.getInstance().get(Calendar.HOUR_OF_DAY), Calendar.getInstance().get(Calendar.MINUTE),
+                true
             ).show()
         })
     }
 
-    fun addCall2(userInfo: UserInfo, type: String) {
-        if (userInfo == null) {
-            Toast.makeText(applicationContext, "请选择一个电话号码", Toast.LENGTH_LONG)
-            return
+    fun addCall2(type: CallType) {
+        try {
+            if (userInfo == null) {
+                Toast.makeText(this, "请选择一个电话号码", Toast.LENGTH_LONG)
+                return
+            }
+            var _date = date.text.toString()
+            var _time = time.text.toString()
+            if (_date == "" || _time == "") {
+                Toast.makeText(this, "设置好时间", Toast.LENGTH_LONG)
+                return
+            }
+            addCall(
+                userInfo!!,
+                type,
+                Calendar.getInstance().apply {
+                    this.set(
+                        dateTime.year,
+                        dateTime.month,
+                        dateTime.day,
+                        dateTime.hour,
+                        dateTime.minute,
+                        dateTime.second
+                    )
+                }.time
+            )
+        }catch (exception:Exception){
+            Toast.makeText(this,"发生错误",Toast.LENGTH_LONG).show()
+            info.text.insert(0,exception.message)
         }
-        var _date = date.text.toString()
-        var _time = time.text.toString()
-        if (_date == "" || _time == "") {
-            Toast.makeText(applicationContext, "设置好时间", Toast.LENGTH_LONG)
-            return
-        }
-
-
+        Toast.makeText(this,"插入成功",Toast.LENGTH_LONG).show()
     }
 
-    fun addCall(userInfo: UserInfo, type: String, date: Date) {
+    fun addCall(userInfo: UserInfo, type: CallType, date: Date) {
         var max = 30 * 60
         var min = 60
         var value = ContentValues()
         value.put(Calls.CACHED_NAME, userInfo.name)
-        value.put(Calls.TYPE, if (type == "in") Calls.INCOMING_TYPE else Calls.OUTGOING_TYPE)
+        value.put(Calls.TYPE, if (type == CallType.In) Calls.INCOMING_TYPE else Calls.OUTGOING_TYPE)
         value.put(Calls.DURATION, Random().nextInt((max - min) + 1) + 1)
         value.put(Calls.NUMBER, userInfo.phone)
         value.put(Calls.DATE, date.time)
@@ -102,7 +116,7 @@ class MainActivity : AppCompatActivity() {
         value.put(Calls.CACHED_LOOKUP_URI, userInfo.uri.toString())
         value.put(Calls.CACHED_MATCHED_NUMBER, userInfo.phone)
         value.put(Calls.CACHED_FORMATTED_NUMBER, userInfo.phone)
-        value.put(Calls.IS_READ, if (type == "in") 1 else null)
+        value.put(Calls.IS_READ, if (type == CallType.In) 1 else null)
 
         contentResolver.insert(Calls.CONTENT_URI, value)
     }
@@ -129,7 +143,7 @@ class MainActivity : AppCompatActivity() {
     fun setCurrentContanct(uri: Uri) {
         this.userInfo = getContancrInfo(uri)
 
-        name.text = userInfo?.uri.toString()
+        name.text = userInfo?.name
         number.text = userInfo?.phone
         info.text.insert(0, userInfo.toString())
     }
@@ -177,7 +191,7 @@ class MainActivity : AppCompatActivity() {
                 s += pp.map { "[${it}=${getValue(it, cursor)}]\n" }
             }
         }
-        findViewById<EditText>(R.id.info).text = SpannableStringBuilder(s)
+        info.text.insert(0, s)
     }
 
     fun getValue(columnName: String, cursor: Cursor): String {
@@ -205,3 +219,16 @@ data class UserInfo(
     var lookupkey: String = "",
     var lookupUri: String = ""
 )
+
+data class DateTime(
+    var year: Int = 0,
+    var month: Int = 0,
+    var day: Int = 0,
+    var hour: Int = 0,
+    var minute: Int = 0,
+    var second: Int = Random().nextInt(60)
+)
+
+enum class CallType {
+    In, Out
+}
