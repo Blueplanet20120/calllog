@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.CallLog.*
 import android.view.View
-import kotlinx.android.synthetic.main.activity_main.*
+import unit.lhn.callinfo.databinding.ActivityMainBinding
 import java.util.*
 import android.net.Uri
 import android.os.Build
@@ -20,29 +20,31 @@ import java.lang.Exception
 
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
     var userInfo: UserInfo? = null
     var dateTime = DateTime()
     @TargetApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-       inbtn.setOnClickListener({ v ->
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+       binding.inbtn.setOnClickListener({ v ->
            addCall2(CallType.In)
        })
-        outbtn.setOnClickListener({ v ->
+        binding.outbtn.setOnClickListener({ v ->
             addCall2(CallType.Out)
         })
-        name.setOnClickListener(View.OnClickListener {
+        binding.name.setOnClickListener(View.OnClickListener {
             intentToContact()
         })
-        number.setOnClickListener(View.OnClickListener {
+        binding.number.setOnClickListener(View.OnClickListener {
             intentToContact()
         })
-        date.setOnClickListener(View.OnClickListener {
+        binding.date.setOnClickListener(View.OnClickListener {
             DatePickerDialog(
                 this,
                 DatePickerDialog.OnDateSetListener({ view, year, month, dayOfMonth ->
-                    date.text = "${String.format("%04d", year)}-${String.format("%02d", month + 1)}-${String.format(
+                    binding.date.text = "${String.format("%04d", year)}-${String.format("%02d", month + 1)}-${String.format(
                         "%02d",
                         dayOfMonth
                     )}"
@@ -55,10 +57,10 @@ class MainActivity : AppCompatActivity() {
                 Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
             ).show()
         })
-        time.setOnClickListener(View.OnClickListener {
+        binding.time.setOnClickListener(View.OnClickListener {
             TimePickerDialog(
                 this, TimePickerDialog.OnTimeSetListener({ view, hourOfDay, minute ->
-                    time.text = "${String.format("%02d", hourOfDay)}:${String.format("%02d", minute)}"
+                    binding.time.text = "${String.format("%02d", hourOfDay)}:${String.format("%02d", minute)}"
                     dateTime.hour = hourOfDay
                     dateTime.minute = minute
 
@@ -75,8 +77,8 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "请选择一个电话号码", Toast.LENGTH_LONG)
                 return
             }
-            var _date = date.text.toString()
-            var _time = time.text.toString()
+            var _date = binding.date.text.toString()
+            var _time = binding.time.text.toString()
             if (_date == "" || _time == "") {
                 Toast.makeText(this, "设置好时间", Toast.LENGTH_LONG)
                 return
@@ -97,7 +99,7 @@ class MainActivity : AppCompatActivity() {
             )
         }catch (exception:Exception){
             Toast.makeText(this,"发生错误",Toast.LENGTH_LONG).show()
-            info.text.insert(0,exception.message)
+            binding.info.text.insert(0,exception.message)
         }
         Toast.makeText(this,"插入成功",Toast.LENGTH_LONG).show()
     }
@@ -143,9 +145,9 @@ class MainActivity : AppCompatActivity() {
     fun setCurrentContanct(uri: Uri) {
         this.userInfo = getContancrInfo(uri)
 
-        name.text = userInfo?.name
-        number.text = userInfo?.phone
-        info.text.insert(0, userInfo.toString())
+        binding.name.text = userInfo?.name
+        binding.number.text = userInfo?.phone
+        binding.info.text.insert(0, userInfo.toString())
     }
 
     fun getContancrInfo(uri: Uri): UserInfo {
@@ -191,7 +193,7 @@ class MainActivity : AppCompatActivity() {
                 s += pp.map { "[${it}=${getValue(it, cursor)}]\n" }
             }
         }
-        info.text.insert(0, s)
+        binding.info.text.insert(0, s)
     }
 
     fun getValue(columnName: String, cursor: Cursor): String {
